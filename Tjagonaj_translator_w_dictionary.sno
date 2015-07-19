@@ -1,0 +1,223 @@
+*		a whole bunch of categories.
+		full_alphabet = "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm"
+		letter = 	any("qwertyuiopasdfghjklzxcvbnm") $ let
+		voiced = 	"bdgvznmrlaeio"
+		unvoiced = 	"btcfsnmrlaeio"
+		consonant = 	any('qwrtpsdfghjklzxcvbnmQWRTPSDFGHJKLZXCVBNM')
+		consonant_butj = any('qwrtpsdfgklzxcvbnmQWRTPSDFGKLZXCVBNM')
+		stop = 		any('qtpdgkcb')
+		stops = 	'qtpdgkcb'
+		fricative =	any('jzvTjjjvsf')
+		fricatives = 	'jzvTjjjvsf'
+		vowel = 	*front_vowel | *back_vowel $ v
+		front_vowel = 	any('ieyIEY')
+		long_vowel = 	'aeiou'	
+		l_s_rep =	'eiIou'
+		back_vowel = 	any('uoaUOA')
+		velar = 	any('kqcgKQCG')
+		voiceless =	any('qtTpsSfhkxc')
+		palatals =	any('DSZNI') $ p
+		fronts = 'ie'
+		backs = 'oa'
+
+*		Let's make a dictionary, so that words we have already translated can be translated at O(1)
+*		And also so that we can predefine words that have non-standard translations (prepositions,
+*		all that sort of malarkey.) 
+
+		dictionary_T_E = table()
+		dictionary_E_T = table()
+		dict_line = break(',') . Tjag span(',') break(',') . Eng span(',')
+
+		output = "Please print existing words as comma-separated values,"
+		output = "then print a line beginning with a *"
+
+dict_setup	line = NULL
+		line = input					:f(error)
+		line pos(0) '***'				:s(define_others)
+		line dict_line					:f(error)
+check_te	check = dictionary_T_E<Tjag>
+		check '/'					:s(append_te)f(insert_te)
+insert_te	dictionary_T_E<Tjag> = '/' Eng			:(check_et)
+append_te	dictionary_T_E<Tjag> = dictionary_T_E<Tjag> '/' Eng
+check_et	check = dictionary_E_T<Eng>
+		check '/'					:s(append_et)f(insert_et)
+insert_et	dictionary_E_T<Eng> = '/' Tjag			:(dict_setup)
+append_et	dictionary_E_T<Eng> = dictionary_E_T<Eng> '/' Tjag :(dict_setup)
+
+define_others
+		output = "Choose your settings"
+		settings = input
+		direction = input
+		output = settings
+		define('lookup(to_trans)','lookup' direction)
+		define('translate(to_trans)','trans' settings)
+		define('digraph_blast(string_d_b)','d_b')
+		define('simple_replace(string_rep)','s_r')
+		define('syllable_match(string_syl)','s_m')
+		define('expand(string_exp)','exp')
+		define('morphology(string_morph)','morph')
+		define('voice(string_voice)','voice')
+		define('devoice_initial(string)','d_i')
+		define('other(string_other)','other')		:(loop_setup)
+
+lookup_et
+		tran = dictionary_E_T<to_trans>		
+		tran '/' = ''
+		lookup = tran					:(return)
+lookup_te
+		tran = dictionary_T_E<to_trans>		
+		tran '/' = ''
+		lookup = tran					:(return)
+
+
+*	Match changes to morphology. Plurals should be handled here, as well as two-word translations.
+morph
+ic		string_morph 'ic' rpos(0) = 'aj'
+sil_e		string_morph vowel . vo letter 'e' ('s' | '') . s rpos(0) = replace(vo,long_vowel,l_s_rep) vo let replace(s, 's', 'i')
+final_stop	string_morph vowel . v stop . s rpos(0) = v replace(s,stops,fricatives)
+		morphology = string_morph			:(return)
+
+*	Make things more phonetic by using caps instead of digraphs. It should prevent potential bugs.
+d_b		
+double		string_d_b letter *let = let			:s(double)
+double_vowel	string_d_b vowel . v1 vowel = v1
+ch		string_d_b ('t' | '') 'ch' = 'D'		:s(ch)
+th_detect	string_d_b 'th' = 'T'				:s(th_detect)
+dr		string_d_b ('d' | 't') any('rl') = 'D'		:s(dr)
+cs		string_d_b 'c' (front_vowel . v) = 's' v	:s(cs)
+xr		string_d_b ((stop | voiceless) . s) 'r' = s 'ir' :s(xr)
+ck		string_d_b 'c' (consonant | back_vowel) . l = 'k' l	:s(ck)
+c		string_d_b 'c' = 'k'				:s(c)
+ng		string_d_b 'n' velar = 'n'			:s(ng)
+wh		string_d_b 'wh' = 'w'				:s(wh)
+ph		string_d_b 'ph' = 'f'				:s(wh)
+sh		string_d_b 'sh' = 'S'				:s(wh)
+*	Might as well make it something totally unrelated.
+gh		string_d_b 'gh' = 'r'				:s(gh)
+		digraph_blast = string_d_b			:(return)
+
+s_r
+k_to_c		string_rep 'k' = 'c'				:s(k_to_c)
+u_to_o		string_rep 'u' = 'o'				:s(u_to_o)
+p_to_b		string_rep 'p' = 'b'				:s(p_to_b)
+x_to_S		string_rep 'x' = 'S'				:s(x_to_S)
+gh_stuff	string_rep 'igh' = 'o'				:s(gh_stuff)
+ni_ne		string_rep 'ni' = 'ne'				:s(ni_ne)
+i_j		string_rep any('iy') vowel . v = 'j' v
+h_j		string_rep 'h' = 'j'				:s(h_j)
+y_begin_j	string_rep pos(0) 'y' = 'j'
+y_end_i		string_rep 'y' rpos(0) = 'i'
+y_loop		string_rep 'y' = 'aj'				:s(y_loop)	
+		simple_replace = string_rep			:(return)
+
+
+s_m
+final_rules	string_syl 't' rpos(0) = 'T'
+		string_syl 'T' rpos(0) = 'To'
+		string_syl palatals rpos(0) = p 'o'
+		string_syl 'b' rpos(0) = 'v'
+		string_syl 'w' rpos(0) = ''
+spirentize	string_syl any(stops) . s any(fricatives) . c2 = replace(s,stops,fricatives) c2 'x' :s(spirentize)
+		string_syl consonant . c1 consonant . c2 rpos(0) = c1 'i' c2
+w_bollocks	string_syl 'w' consonant . c1 = c1		:s(w_bollocks)
+syllable_rules1	string_syl pos(0) consonant . c1 consonant . c2 = c1 'i' c2
+syllable_rules2	string_syl consonant . c1 consonant . c2 rpos(0) = c1 'i' c2
+syllable_rules3	string_syl consonant_butj . c1 consonant . c2 consonant . c3 = c1 c2 'i' c3 :s(syllable_rules3)
+palate_clusters	string_syl palatals . p consonant . c = p "a" c	:s(palate_clusters)
+		syllable_match = string_syl			:(return)
+
+exp		
+tj		string_exp any('D') = 'dj'			:s(tj)
+sj		string_exp any('SZ') = 'zj'			:s(sj)
+nj		string_exp any('N') = 'nj'			:s(nj)
+th_replace	string_exp 'T' = 'dh'				:s(th_replace)
+Iaj		string_exp 'I' = 'aj'				:s(Iaj)
+		expand = string_exp				:(return)
+
+voice
+		string_voice = replace(string_voice,unvoiced,voiced)		
+		voice = string_voice				:(return)
+
+
+d_i		string len(1) . c = replace(c,voiced,unvoiced)
+		string pos(0) len(1) . c = replace (c,'jJ','hH')
+		devoice_initial = string			:(return)
+
+other		
+ag_aj		string_other 'ag' (consonant | 'a') . c = 'aj' c	:s(ag_aj)
+d_dh		string_other vowel . v1 'd' vowel . v2 = v1 'dh' v2	:s(d_dh)
+*	No real reason for the next two.
+aj_i		string_other 'ajl' = 'il'			:s(aj_i)
+pal_vowels	string_other 'j' any(fronts) . f = 'j' replace(f,fronts,backs) :s(pal_vowels)
+j_h		string_other ('j' | 'h') 'aj' = 'hi'		:s(j_h)
+rVr		string_other 'r' vowel 'r' = 'r'		:s(rVr)
+j_initial_fix	string_other len(1) . c = replace(c,'jJ','hH')
+		other = string_other				:(return)
+
+trans_print_all	
+		output = to_trans
+		string = to_trans
+		dictionary_E_T<string>	pos(0) rpos(0)		:s(by_phon0)f(look)
+by_phon0	string = morphology(string)
+		output = string
+		string = digraph_blast(string)
+		output = string
+		string = simple_replace(string)
+		output = string
+		string = syllable_match(string)
+		output = string
+		string = expand(string)
+		output = string
+		string = voice(string)
+		output = string
+		string = devoice_initial(string)
+		output = string		
+		string = other(string)
+		output = string	
+		translate = string				:(return)
+
+look
+		translate = lookup(string)			:(return)
+
+trans_print_none		
+		string = to_trans
+		dictionary_E_T<string>	pos(0) rpos(0)		:s(by_phon1)f(look)
+by_phon1	string = morphology(string)
+		string = digraph_blast(string)
+		string = simple_replace(string)
+		string = syllable_match(string)
+		string = expand(string)
+		string = voice(string)
+		string = devoice_initial(string)		
+		string = other(string)	
+		translate = string				:(return)
+
+trans_print_echo		
+		string = to_trans
+		dictionary_E_T<string>	pos(0) '/'		:f(by_phon2)s(look)
+by_phon2	string = morphology(string)
+		string = digraph_blast(string)
+		string = simple_replace(string)
+		string = syllable_match(string)
+		string = expand(string)
+		string = voice(string)
+		string = devoice_initial(string)		
+		string = other(string)
+		output = string	
+		translate = string				:(return)
+
+loop_setup
+		meta = ' ,.;:!?()'
+		meta1 = meta
+		field = (break(meta) . word span(meta) . meta_char) | (span(full_alphabet) . word rpos(0) . meta_char)
+loop
+whitespace	translated_phrase '  ' = ' '			:s(whitespace)		
+		output = translated_phrase
+		translated_phrase = ''
+		phrase = input					:f(end)
+*		output = phrase
+word_by_word	phrase field = ''				:f(loop)
+		translated_phrase = translated_phrase translate(word) meta_char	:s(word_by_word)
+								:(loop)
+error		output = "There was some sort of error."
+end

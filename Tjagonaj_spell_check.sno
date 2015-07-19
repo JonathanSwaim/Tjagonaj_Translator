@@ -1,0 +1,34 @@
+    word =  pos(0) *fragment rpos(0)
+    fragment = pos(0) (*fragment *syllable | *initial_syllable)
+
+    initial_syllable = (*initial_consonant | '') *vowel (*end_consonant | '')
+    syllable = (*consonant | '') *vowel (*end_consonant | '')
+
+    letter = *consonant | *vowel
+    consonant = any('bdgvzjnmrl') | 'dj' | 'zj' | 'nj' | 'dh'
+    end_consonant = any('bdgvznmrl') | 'dh'
+    initial_consonant = any('btcfshnmrl') | 'tj' | 'sj' | 'nj' | 'th'
+    vowel = any('aeio') | 'aj'
+
+    fricative = any('fshvz') | 'th' | 'dh'
+    stop = any('bdgtc') | 'tj' | 'dj'
+    palatal = 'tj' | 'sj' | 'nj' | 'dj' | 'zj'
+
+*To rule out difficult things I don't want to make real patterns for yet.
+    illegal = *ns | *ff | *dv | *sf | *pc
+    ns = 'md' | 'mg' | 'nb'
+    ff = fricative fricative
+    dv = any('aeio') vowel
+    sf = stop rpos(0)
+    pc = palatal consonant
+
+    upper = 'QWERTYUIOPASDFGHJKLZXCVBNM'
+    lower = 'qwertyuiopasdfghjklzxcvbnm'
+
+isword  w = input   :f(end)
+    w = replace(w,upper,lower)
+    w pos(0) word   :f(fel)
+    w illegal       :s(fel)
+    output = 'yes'  :(isword)
+fel output = 'no'   :(isword)
+end
