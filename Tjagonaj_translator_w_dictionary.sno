@@ -28,8 +28,8 @@
 		dictionary_E_T = table()
 		dict_line = break(',') . Tjag span(',') break(',') . Eng span(',')
 
-		output = "Please print existing words as comma-separated values,"
-		output = "then print a line beginning with a *"
+*		output = "Please print existing words as comma-separated values,"
+*		output = "then print a line beginning with a *"
 
 dict_setup	line = NULL
 		line = input					:f(error)
@@ -45,10 +45,10 @@ insert_et	dictionary_E_T<Eng> = '/' Tjag			:(dict_setup)
 append_et	dictionary_E_T<Eng> = dictionary_E_T<Eng> '/' Tjag :(dict_setup)
 
 define_others
-		output = "Choose your settings"
+*		output = "Choose your settings"
 		settings = input
 		direction = input
-		output = settings
+*		output = settings
 		define('lookup(to_trans)','lookup' direction)
 		define('translate(to_trans)','trans' settings)
 		define('digraph_blast(string_d_b)','d_b')
